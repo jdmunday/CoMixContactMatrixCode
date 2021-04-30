@@ -18,6 +18,7 @@ library(viridis)
 
 source('r/functions/get_minimal_data.R')
 source('r/functions/functions.R')
+source('r/functions/get_react_data.R')
 source('r/functions/calc_cm.R')
 source('r/functions/compare_Rs.R')
 
@@ -29,19 +30,22 @@ data =  get_minimal_data()
 # decant data into relevant containers
 contacts =  data[[1]]
 parts =  data[[2]]
-parts = parts[between(date, lubridate::ymd('20200324'), lubridate::ymd('20200603'))]
-contacts = contacts[between(date, lubridate::ymd('20200324'), lubridate::ymd('20200603'))]
-ignore_puid = qs::qread('../comix/data/local_august.qs')
-contacts = contacts[!(part_wave_uid %in% ignore_puid$part_wave_uid)]
-parts = parts[!(part_wave_uid %in% ignore_puid$part_wave_uid)]
+
+start_date = lubridate::ymd('20210308')
+end_date = lubridate::ymd('20210329')
+
+parts = parts[between(date, start_date, end_date)]
+contacts = contacts[between(date, start_date, end_date)]
 
 
 # set breaks and get population proportions 
 breaks = c(0,5,12,18,30,40,50,60,70,Inf)
 #breaks = c(0,18,65,Inf)
 popdata_totals = get_popvec(breaks, year_ = 2020)
-week_range = c(1:11)
-samples_ = 10
+weeks_in_parts = sort(unique(parts$survey_round))
+week_range = c(min(weeks_in_parts):max(weeks_in_parts))
+#week_range = 34:51
+samples_ = 1000
 fit_with_ = 'bs'
 
 # Filter data -------------------------------------------------------------
@@ -71,7 +75,7 @@ for (i in 1:length(nation_names)){
   # calculate contact matrices-------------------------------------------------------------
   
   
-  outfolder=paste0('outputs/regular/', nation_names[i], '/')
+  outfolder=paste0('outputs/regular/', nation_names[i], '/reopening/')
   if(!dir.exists(outfolder)){
     dir.create(outfolder, recursive = TRUE)
   }

@@ -6,12 +6,6 @@ source('r/presentation/plot_comparison_cms.R')
 source('r/functions/get_r_estimates.R')
 source('r/functions/get_minimal_data.R')
 
-data =  get_minimal_data()
-
-# decant data into relevant containers
-contacts =  data[[1]]
-parts =  data[[2]]
-
 all_egs = get_all_egs()
 
 periods = c('1. Lockdown 1', 
