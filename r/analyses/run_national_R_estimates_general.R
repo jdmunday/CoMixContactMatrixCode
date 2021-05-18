@@ -18,7 +18,7 @@ library(viridis)
 
 source('r/functions/get_minimal_data.R')
 source('r/functions/functions.R')
-source('r/functions/get_react_data.R')
+# source('r/functions/get_react_data.R')
 source('r/functions/calc_cm.R')
 source('r/functions/compare_Rs.R')
 
