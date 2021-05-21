@@ -90,7 +90,7 @@ plot_cms_comparison = function(all_egs, pair_sr, region=''){
     geom_tile()+
     geom_text(color='white', size=5)+
     facet_wrap( ~sr, ncol=1) +
-    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0,4.))+ 
+    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0,7.5))+ 
     ylab('Contact age group') +
     xlab('Participant age group') +
     theme(axis.line=element_blank(),
@@ -154,7 +154,7 @@ plot_all_cms = function(all_egs, region='', periods, breaks = c(0,5,12,18,30,40,
     geom_tile()+
     geom_text(color='white', size=5)+
     facet_wrap( ~sr) +
-    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0.02,4.5), trans='log', breaks=c(0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2., 4.), na.value='black')+ 
+    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0.02,7.5), trans='log', breaks=c(0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2., 4.), na.value='black')+ 
     guides(fill=guide_colorbar(barheight=30))+
     ylab('Contact age group') +
     xlab('Participant age group') +
@@ -199,9 +199,9 @@ augment_cms = function(cmss, swapouts  = 2, breaks = c(0,5,12,18,30,40,50,60,70,
   eg = data.table(eg)
 
   
-  boolian_switch = matrix(eg[,Var1 == levs[swapouts] | Var2 == levs[swapouts]], nrow=81, ncol=1000)
+  boolean_switch = matrix(eg[,Var1 == levs[swapouts] | Var2 == levs[swapouts]], nrow=81, ncol=1000)
 
-  cms_aug = cms2 * data.table(boolian_switch) +  cms1 * (-(data.table(boolian_switch) -1))
+  cms_aug = cms2 * data.table(boolean_switch) +  cms1 * (-(data.table(boolean_switch) -1))
   
   cms_aug
 }

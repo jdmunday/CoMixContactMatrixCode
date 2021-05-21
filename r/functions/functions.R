@@ -103,7 +103,7 @@ sample_age_table <- function(prts, cnts, agegroupbreaks, weights=NULL){
     cnts_ages = cnts[!is.na(cnt_age_est_min)][,c('part_id')]
     cnts_ages[,'cnt_assigned_age_groups' :=sampled_ages_cnts]
     
-    }
+  }
 
 
   
@@ -368,43 +368,170 @@ get_eigs_from_means = function(eg, mus, popdata_totals, breaks) {
 
 # Sample with replacement -------------------------------------------------
 
+nb_optim <- function(counts_, n, param) {
+  if(sum(counts_) == 0){
+    out = 0
+  }else{
+    # out = tryCatch({
+    #   outs = optim(c(mu = 0.5, k = 1), lower = c(mean = 1e-5, k = 1e-5), nb_loglik, x = counts_, n = n, method = "L-BFGS-B")
+    #   as.numeric(outs$par[param])
+    # },
+    # error = function(e){
+    #   message("Optim convergence failed due to too few counts, returning 0")
+    #   message("Original error message:")
+    #   message(e)
+    #   return(0)
+    # })
+    outs = optim(c(mu = 0.5, k = 1), lower = c(mean = 1e-5, k = 1e-5), nb_loglik, x = counts_, n = n, method = "L-BFGS-B")
+    if(outs$convergence==0){ # return value from optimisation if it converges
+      out = as.numeric(outs$par[param])
+    } else { # print error message and final value from optimisation if it fails to converge, return 0 
+      # print(outs$message)
+      # print(as.numeric(outs$par[param]))
+      out = 0
+    }
+  }
+  return(out)
+}
 
-nbinom_optim_bs <- function(i, j, param, n, count_frame, bs = 1) {
+poiss_optim <- function(counts_, n) {
+  if(sum(counts_) == 0){
+    out = 0
+  }else{
+    outs = optim(0.5, lower = 1e-5, poiss_loglik, x = counts_, n = n, method = "L-BFGS-B")
+    if(outs$convergence==0){ # return value from optimisation if it converges
+      out = as.numeric(outs$par)
+    } else { # print error message and final value from optimisation if it fails to converge, return 0 
+      # print(outs$message)
+      # print(as.numeric(outs$par))
+      out = 0
+    }
+  }
+  return(out)
+}
+
+trunc_nb_optim <- function(counts_, n, param) {
+  # Remove values greater than truncation limit
+  counts_ = counts_[counts_<=n]
+  if(sum(counts_) == 0){
+    out = 0
+  }else{
+    # out = tryCatch({
+    #   outs = optim(c(mu = 0.5, k = 1), lower = c(mean = 1e-5, k = 1e-5), trunc_nb_loglik, x = counts_, n = n, method = "L-BFGS-B")
+    #   as.numeric(outs$par[param])
+    # },
+    # error = function(e){
+    #   print(counts_)
+    #   message("Original error message:")
+    #   message(e)
+    #   return(0)
+    # })
+    outs = optim(c(mu = 0.5, k = 1), lower = c(mean = 1e-5, k = 1e-5), trunc_nb_loglik, x = counts_, n = n, method = "L-BFGS-B")
+    if(outs$convergence==0){ # return value from optimisation if it converges
+      out = as.numeric(outs$par[param])
+    } else { # print error message and final value from optimisation if it fails to converge, return 0
+      # print(outs$message)
+      # print(as.numeric(outs$par[param]))
+      out = 0
+    }
+  }
+  return(out)
+}
+
+trunc_poiss_optim <- function(counts_, n) {
+  # Remove values greater than truncation limit
+  counts_ = counts_[counts_<=n]
+  if(sum(counts_) == 0){
+    out = 0
+  }else{
+    outs = optim(0.5, lower = 1e-5, trunc_poiss_loglik, x = counts_, n = n, method = "L-BFGS-B")
+    if(outs$convergence==0){ # return value from optimisation if it converges
+      out = as.numeric(outs$par)
+    } else { # print error message and final value from optimisation if it fails to converge, return 0 
+      # print(outs$message)
+      # print(as.numeric(outs$par))
+      out = 0
+    }
+  }
+  return(out)
+}
+
+nbinom_optim_bs <- function(i, j, param, n, count_frame, bs = 1, trunc_flag = F) {
   
   counts = count_frame[count_frame$prt_age_group == i & count_frame$cnt_age_group == j]$V1
   
-  bs_optim <- function(counts_ ) {
-      if(sum(counts_) == 0){
-        return(0)
-      }else{
-      outs = optim(c(mu = 0.5, k = 1), lower = c(mean = 1e-5, k = 1e-5), nb_loglik, x = counts_, n = n, method = "L-BFGS-B")
-      return(as.numeric(outs$par[param]))
+  if(sum(counts) != 0){
+    # counts_mat = matrix(counts,nrow = 1,ncol = length(counts))
+    # if (bs > 1){
+    #   for(k in 1:(bs-1)){
+    #     counts_mat =  rbind(counts_mat, sample(counts, replace = TRUE))
+    #   }
+    # }
+    # if (trunc_flag){
+    #   outs_mat = apply(counts_mat[,,drop=F], FUN = trunc_nb_optim, MARGIN = 1, n = n)
+    # } else {
+    #   outs_mat = apply(counts_mat[,,drop=F], FUN = nb_optim, MARGIN = 1, n = n)
+    # }
+    outs_mat = numeric(bs)
+    # outs_mat = foreach(k=1:bs,.combine = 'c') %dopar% {
+    for (k in 1:bs){
+      counts_smpl = sample(counts, replace = TRUE)
+      if (trunc_flag){
+        outs_mat[k] = trunc_nb_optim(counts_smpl, n, param)
+      } else {
+        outs_mat[k] = nb_optim(counts_smpl, n, param)
       }
-    
-  }
-  
-  if(sum(counts != 0)){
-    counts_mat = c(counts)
-    for(k in 1:(bs-1)){
-      counts_mat =  rbind(counts_mat, sample(counts, replace = TRUE))
     }
-    
-    outs_mat = apply(counts_mat, FUN = bs_optim, MARGIN = 1)
-    outs_mat
   } else{
-    return(rep(0,bs))
+    outs_mat = rep(0,bs)
   }
+  return(outs_mat)
 }
 
-get_matrix_bs = function(cont_per_age_per_part, breaks, trunc, param = 'mu', bs = 1) {
+poiss_optim_bs <- function(i, j, param, n, count_frame, bs = 1, trunc_flag = F) {
   
+  counts = count_frame[count_frame$prt_age_group == i & count_frame$cnt_age_group == j]$V1
+  
+  if(sum(counts) != 0){
+    # counts_mat = matrix(counts,nrow = 1,ncol = length(counts))
+    # if (bs > 1){
+    #   for(k in 1:(bs-1)){
+    #     counts_mat =  rbind(counts_mat, sample(counts, replace = TRUE))
+    #   }
+    # }
+    # if (trunc_flag){
+    #   outs_mat = apply(counts_mat[,,drop=F], FUN = trunc_poiss_optim, MARGIN = 1, n = n)
+    # } else {
+    #   outs_mat = apply(counts_mat[,,drop=F], FUN = poiss_optim, MARGIN = 1, n = n)
+    # }
+    outs_mat = numeric(bs)
+    # outs_mat = foreach(k=1:bs,.combine = 'c') %dopar% {
+    for (k in 1:bs){
+      counts_smpl = sample(counts, replace = TRUE)
+      if (trunc_flag){
+        outs_mat[k] = trunc_poiss_optim(counts_smpl, n)
+      } else {
+        outs_mat[k] = poiss_optim(counts_smpl, n)
+      }
+    }
+  } else{
+    outs_mat = rep(0,bs)
+  }
+  return(outs_mat)
+}
+
+get_matrix_bs = function(cont_per_age_per_part, breaks, trunc, param = 'mu', bs = 1, trunc_flag = F, setting = "") {
   
   levs <- unique(unlist(cut(seq(0,120),breaks, right=FALSE), use.names = FALSE))
   # Get columns of age-groups to put into mapply
   eg = expand.grid(sort(levs),sort(levs))
   names(eg) = c('age_group', 'age_group_cont')
-  # Get means from neg_binom opitmsisation
-  means_mat <- mapply(nbinom_optim_bs, eg$age_group, eg$age_group_cont, param=param, n=trunc, bs = bs, count_frame=list(cont_per_age_per_part ))
+  # Get means from neg_binom regression (or Poisson regression if setting="home")
+  if (setting=="home"){
+    means_mat <- mapply(poiss_optim_bs, eg$age_group, eg$age_group_cont, param=param, n=trunc, bs = bs, count_frame=list(cont_per_age_per_part), trunc_flag = trunc_flag)
+  } else {
+    means_mat <- mapply(nbinom_optim_bs, eg$age_group, eg$age_group_cont, param=param, n=trunc, bs = bs, count_frame=list(cont_per_age_per_part), trunc_flag = trunc_flag)
+  }
   # eg['size'] = mapply(nbinom_optim, eg$age_group, eg$age_group_cont, param='size')
   means_mat <- matrix(unlist(means_mat), ncol = (length(breaks)-1)^2)
   eg = data.table(eg)
