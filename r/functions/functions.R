@@ -81,7 +81,7 @@ get_contact_age_weights = function(weightforage=42, weightoffage=1){
   
 }
 
-sample_age_table <- function(prts, cnts, agegroupbreaks, weights=NULL){
+sample_age_table <- function(prts, cnts, agegroupbreaks, weights=NULL, setting=""){
   
   #create column of ages of participants
   sampled_ages_prts = mapply(FUN = function(X, Y){sample(rep(seq(X,Y),2), 1)}, prts[!is.na(part_age_est_min)]$part_age_est_min, prts[!is.na(part_age_est_min)]$part_age_est_max)
@@ -94,13 +94,23 @@ sample_age_table <- function(prts, cnts, agegroupbreaks, weights=NULL){
   if(is.null(weights)){
     #create column of ages of contacts 
     sampled_ages_cnts = mapply(FUN = function(X, Y){sample(rep(seq(X,Y),2), 1)}, cnts[!is.na(cnt_age_est_min)]$cnt_age_est_min, cnts[!is.na(cnt_age_est_min)]$cnt_age_est_max)
-    cnts_ages = cnts[!is.na(cnt_age_est_min)][,c('part_id')]
+    if (setting==""){
+      cnts_ages = cnts[!is.na(cnt_age_est_min)][,c('part_id')]
+    } else {
+      cols = c("part_id",paste0("cnt_",setting))
+      cnts_ages = cnts[!is.na(cnt_age_est_min)][,..cols]
+    }
     cnts_ages[,'cnt_assigned_age_groups' :=sampled_ages_cnts]
   } else { 
     probs = sapply(cnts$prt_assigned_age_groups, FUN = function(X){weights[,X]})
     #create column of ages of contacts 
     sampled_ages_cnts = mapply(FUN = function(X, Y, Z){sample(rep(seq(X,Y),2), 1, prob = nafill(rep(probs[[Z]][(X+1):(Y+1)],2),fill=1))}, cnts[!is.na(cnt_age_est_min)]$cnt_age_est_min, cnts[!is.na(cnt_age_est_min)]$cnt_age_est_max, 1:length(cnts[!is.na(cnt_age_est_min)]$cnt_age_est_max))
-    cnts_ages = cnts[!is.na(cnt_age_est_min)][,c('part_id')]
+    if (setting==""){
+      cnts_ages = cnts[!is.na(cnt_age_est_min)][,c('part_id')]  
+    } else {
+      cols = c("part_id",paste0("cnt_",setting))
+      cnts_ages = cnts[!is.na(cnt_age_est_min)][,..cols]
+    }
     cnts_ages[,'cnt_assigned_age_groups' :=sampled_ages_cnts]
     
   }
@@ -205,7 +215,7 @@ symetricise_matrix = function(eg, popdata_totals, breaks) {
 }
 
 
-get_age_table = function(conts, parts, week_choice=NULL, breaks, weights=NULL){
+get_age_table = function(conts, parts, week_choice=NULL, breaks, weights=NULL, setting=""){
   
   
   if (!is.null(week_choice)){
@@ -217,7 +227,7 @@ get_age_table = function(conts, parts, week_choice=NULL, breaks, weights=NULL){
   # Get numeric age ranges for every participant and contact possible
   #parts_conts <-  assign_min_max_ages(parts, conts)
   # sample ages from ranges and construct a table of part_id, participant age and contact age
-  age_table   <-  sample_age_table(parts, conts, breaks, weights=weights)
+  age_table   <-  sample_age_table(parts, conts, breaks, weights=weights, setting=setting)
   #unique_parts = unique(age_table[,c("part_id", "prt_age_group")])
   #sample_props = unique(unique_parts[,count:=.N, by=prt_age_group][,c("prt_age_group", "count")])[order(prt_age_group)]
   #sample_props[,props:=count/sum(count)]
@@ -225,7 +235,11 @@ get_age_table = function(conts, parts, week_choice=NULL, breaks, weights=NULL){
   
   age_table = age_table[complete.cases(age_table[,'prt_age_group']),]
   
-  age_table[,contacts := .N, by = c("part_id")]
+  if (setting==""){
+    age_table[,contacts := .N, by = c("part_id")]
+  } else {
+    age_table[,contacts := sum(eval(parse(text = paste0("cnt_",setting)))), by = c("part_id")]
+  }
   
   all_conts = unique(age_table[,c('part_id', 'prt_age_group', 'contacts' )])
   age_group_table = age_table[,c('prt_age_group', 'cnt_age_group')]
@@ -235,7 +249,11 @@ get_age_table = function(conts, parts, week_choice=NULL, breaks, weights=NULL){
   count_mat_total = table(lapply(age_group_table, factor, sort(levs)))
   
   #Get counts per age group per participant
-  cont_per_age_per_part = age_table[, (contacts = .N), by = .(part_id, prt_age_group, cnt_age_group)]
+  if (setting==""){
+    cont_per_age_per_part = age_table[, (contacts = .N), by = .(part_id, prt_age_group, cnt_age_group)]
+  } else {
+    cont_per_age_per_part = age_table[, (contacts = sum(eval(parse(text = paste0("cnt_",setting))))), by = .(part_id, prt_age_group, cnt_age_group)]
+  }
   
   # this bit is required to add 0s into the table i.e. where no contacts were reported with some age groups by some contacts.
   # make 'complete' data.table with all combinations of part_id and cnt_age_group
@@ -410,6 +428,19 @@ poiss_optim <- function(counts_, n) {
   return(out)
 }
 
+zinb_optim <- function(counts_, n, param) {
+  outs = optim(c(p = 0.8, mu = 0.5, k = 1), lower = c(p = 1e-8, mu = 1e-8, k = 1e-8), upper = c(p = 1 - 1e-8, mu = Inf, k = Inf), zinb_loglik, x = counts_, n = n, method = "L-BFGS-B")
+  if(outs$convergence==0){ # return value from optimisation if it converges
+    out = outs$par[param]
+  } else { # print error message and final value from optimisation if it fails to converge, return 0 
+    # print(outs$message)
+    # print(outs$par[param])
+    out = rep(0,length(param))
+    names(out) <- param
+  }
+  return(out)  
+}
+
 trunc_nb_optim <- function(counts_, n, param) {
   # Remove values greater than truncation limit
   counts_ = counts_[counts_<=n]
@@ -456,7 +487,7 @@ trunc_poiss_optim <- function(counts_, n) {
   return(out)
 }
 
-nbinom_optim_bs <- function(i, j, param, n, count_frame, bs = 1, trunc_flag = F) {
+nbinom_optim_bs <- function(i, j, param, n, count_frame, bs = 1, trunc_flag = F, zi = F) {
   
   counts = count_frame[count_frame$prt_age_group == i & count_frame$cnt_age_group == j]$V1
   
@@ -476,15 +507,21 @@ nbinom_optim_bs <- function(i, j, param, n, count_frame, bs = 1, trunc_flag = F)
     # outs_mat = foreach(k=1:bs,.combine = 'c') %dopar% {
     for (k in 1:bs){
       counts_smpl = sample(counts, replace = TRUE)
-      if (trunc_flag){
-        outs_mat[k] = trunc_nb_optim(counts_smpl, n, param)
+      if (zi){
+        out = zinb_optim(counts_smpl, n, param)
+        outs_mat[k] = (1 - out["p"]) * out["mu"]
       } else {
-        outs_mat[k] = nb_optim(counts_smpl, n, param)
+        if (trunc_flag){
+          outs_mat[k] = trunc_nb_optim(counts_smpl, n, param)
+        } else {
+          outs_mat[k] = nb_optim(counts_smpl, n, param)
+        }          
       }
     }
   } else{
     outs_mat = rep(0,bs)
   }
+
   return(outs_mat)
 }
 
@@ -520,7 +557,7 @@ poiss_optim_bs <- function(i, j, param, n, count_frame, bs = 1, trunc_flag = F) 
   return(outs_mat)
 }
 
-get_matrix_bs = function(cont_per_age_per_part, breaks, trunc, param = 'mu', bs = 1, trunc_flag = F, setting = "") {
+get_matrix_bs = function(cont_per_age_per_part, breaks, trunc, param = 'mu', bs = 1, trunc_flag = F, zi = F, setting = "") {
   
   levs <- unique(unlist(cut(seq(0,120),breaks, right=FALSE), use.names = FALSE))
   # Get columns of age-groups to put into mapply
@@ -528,9 +565,9 @@ get_matrix_bs = function(cont_per_age_per_part, breaks, trunc, param = 'mu', bs 
   names(eg) = c('age_group', 'age_group_cont')
   # Get means from neg_binom regression (or Poisson regression if setting="home")
   if (setting=="home"){
-    means_mat <- mapply(poiss_optim_bs, eg$age_group, eg$age_group_cont, param=param, n=trunc, bs = bs, count_frame=list(cont_per_age_per_part), trunc_flag = trunc_flag)
+    means_mat <- mapply(poiss_optim_bs, eg$age_group, eg$age_group_cont, MoreArgs = list(param=param, n=trunc, bs = bs, count_frame=cont_per_age_per_part, trunc_flag = trunc_flag))
   } else {
-    means_mat <- mapply(nbinom_optim_bs, eg$age_group, eg$age_group_cont, param=param, n=trunc, bs = bs, count_frame=list(cont_per_age_per_part), trunc_flag = trunc_flag)
+    means_mat <- mapply(nbinom_optim_bs, eg$age_group, eg$age_group_cont, MoreArgs = list(param=param, n=trunc, bs = bs, count_frame=cont_per_age_per_part, trunc_flag = trunc_flag, zi = zi))
   }
   # eg['size'] = mapply(nbinom_optim, eg$age_group, eg$age_group_cont, param='size')
   means_mat <- matrix(unlist(means_mat), ncol = (length(breaks)-1)^2)

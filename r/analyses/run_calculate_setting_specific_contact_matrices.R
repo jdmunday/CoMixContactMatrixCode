@@ -53,7 +53,8 @@ week_range = c(1,11,19,24,34,37,39,42,51) #c(min(weeks_in_parts):max(weeks_in_pa
 nwk = c(10,8,5,10,3,2,3,9,6)
 samples_ = 1000
 fit_with_ = 'bs'
-trunc_flag_ = T # flag for whether or not to use truncation rather than uncorrected censoring
+trunc_flag_ = F # flag for whether or not to use truncation rather than uncorrected censoring
+zi_ = T # flag for fitting zero-inflated negative binomial vs negative binomial
 
 # Filter data -------------------------------------------------------------
 unique_wave_pid <- unique(parts$part_wave_uid)
@@ -75,22 +76,22 @@ weights = get_contact_age_weights()
 for (i in 1:length(country_names)){
 #for (i in 1:length(regions)){
 # for (i in 1:length(nation_names)){
-  for (j in 2:length(settings)){
+  for (j in 1:length(settings)){
     # for (k in 1:length(week_range)){
     lcms = foreach(k=1:length(week_range)) %dopar% {
       print(k)
       
-      contacts_setting <- contacts[country %in% countries[[i]] & eval(parse(text=paste0("cnt_",settings[j])))]
-      unique_wave_pid <- unique(contacts_setting$part_wave_uid)
-      
-      parts_setting <- parts[part_wave_uid %in% unique_wave_pid]
+      # contacts_nation <- contacts[country %in% countries[[i]] & eval(parse(text=paste0("cnt_",settings[j])))]
+      # unique_wave_pid <- unique(contacts_nation$part_wave_uid)
+      # 
+      # parts_nation <- parts[part_wave_uid %in% unique_wave_pid]
       
       # parts_nation <- parts[area_3_name %in% regions[[i]]]
       # parts_nation <- parts[area_3_name %in% nations[[i]]]
-      # parts_nation <- parts[country %in% countries[[i]]]
+      parts_nation <- parts[country %in% countries[[i]]]
       
-      # unique_wave_pid <- unique(parts_nation$part_wave_uid)
-      # contacts_nation <- contacts[part_wave_uid %in% unique_wave_pid]
+      unique_wave_pid <- unique(parts_nation$part_wave_uid)
+      contacts_nation <- contacts[part_wave_uid %in% unique_wave_pid]
       
       # print(nations[[i]])
       print(countries[[i]])
@@ -104,7 +105,7 @@ for (i in 1:length(country_names)){
         dir.create(outfolder, recursive = TRUE)
       }
       
-      cms_max50 = calc_cm_general(parts_setting, contacts_setting, breaks, max_ = max_, popdata_totals, weeks_range = week_range[k], nwks=nwk[k], outfolder=outfolder, fitwith=fit_with_, samples=samples_, weights=NULL, trunc_flag=trunc_flag_, setting=settings[j])
+      cms_max50 = calc_cm_general(parts_nation, contacts_nation, breaks, max_ = max_, popdata_totals, weeks_range = week_range[k], nwks=nwk[k], outfolder=outfolder, fitwith=fit_with_, samples=samples_, weights=NULL, trunc_flag=trunc_flag_, zi=zi_, setting=settings[j])
       
     }
     

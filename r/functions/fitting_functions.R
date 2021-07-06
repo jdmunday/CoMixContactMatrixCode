@@ -41,6 +41,18 @@ poiss_loglik <- function(x, par, n){
   return(-sum(ll))
 }
 
+# This function calculates the log-likelihood of a zero-inflated negative binomial distribution given set of parameters 'par' and data 'x'.
+zinb_loglik <- function(x, par, n){
+  p <- par[["p"]]
+  k <- par[["k"]]
+  mu <- par[["mu"]]
+  
+  ll <- rep(NA_real_, length(x))
+  ll[x == 0] <- log(p + (1-p)*dnbinom(0, mu = mu, size = 1/k))
+  ll[x > 0 & x < n] <- log(1-p) + dnbinom(x[x > 0 & x < n], mu = mu, size = 1/k, log = T)
+  ll[x >= n] <- log(1-p) + dnbinom(n, mu = mu, size = 1/k, log = T)
+  return(-sum(ll))
+}
 
 # This function calculates the log-likelihood of a truncated negative binomial distribution given set of parameters 'par', data 'x', and upper truncation limit 'n'.
 trunc_nb_loglik <- function(x, par, n) {

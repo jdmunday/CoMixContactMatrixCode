@@ -1,7 +1,7 @@
 ## calculate the contact matrices
 
 
-calc_cm_general <- function(parts_ , conts_, breaks, max_ = 1000, popdata_totals, weeks_range=23:33, nwks=2, samples=10, fitwith='bs', outfolder='outputs/regular/', model_path='stan/trunc_negbinom_matrix_bunchtrunc.stan', prior_pars_mu=NULL, prior_pars_k=NULL, weights = NULL, trunc_flag = F, setting = ""){
+calc_cm_general <- function(parts_ , conts_, breaks, max_ = 1000, popdata_totals, weeks_range=23:33, nwks=2, samples=10, fitwith='bs', outfolder='outputs/regular/', model_path='stan/trunc_negbinom_matrix_bunchtrunc.stan', prior_pars_mu=NULL, prior_pars_k=NULL, weights = NULL, trunc_flag = F, zi = F, setting = ""){
   print(nwks)
   if(!dir.exists(paste0(outfolder, 'contact_matrices/'))){
     dir.create(paste0(outfolder, 'contact_matrices/'), recursive = TRUE)
@@ -47,23 +47,26 @@ calc_cm_general <- function(parts_ , conts_, breaks, max_ = 1000, popdata_totals
       weeks = week
     }
     filename_primer = paste0(outfolder, 'contact_matrices/', fitwith, samples, '_ngrps', length(breaks) - 1, '_cap', max_, '_nwks', length(weeks),'_sr', week, '_', setting, '_')
+    if (zi){
+      filename_primer = paste0(filename_primer,"zi_")
+    }
     if (trunc_flag){
       filename_primer = paste0(filename_primer,"trunc_")
     }
     
     if(week %in% c(1:6, 17,18))  weeks <- c(weeks, 700)
     
-    
+    # Replace weekend contacts by week contacts if there were no surveys done at the weekend in that survey round
     if(length(conts_weekend[survey_round %in% weeks]$part_id) == 0) {
       conts_weekend = conts_weekday
       parts_weekend = parts_weekday
     }
     
-    ct_ac_weekend = get_age_table(conts_weekend, parts_weekend, weeks, breaks, weights = weights)
+    ct_ac_weekend = get_age_table(conts_weekend, parts_weekend, weeks, breaks, weights = weights, setting = setting)
     cont_per_age_per_part_weekend  = ct_ac_weekend[[1]]
     all_conts_weekend  = ct_ac_weekend[[2]]
     
-    ct_ac_weekday = get_age_table(conts_weekday, parts_weekday, weeks, breaks, weights = weights)
+    ct_ac_weekday = get_age_table(conts_weekday, parts_weekday, weeks, breaks, weights = weights, setting = setting)
     cont_per_age_per_part_weekday  = ct_ac_weekday[[1]]
     all_conts_weekday  = ct_ac_weekday[[2]]
     
@@ -85,8 +88,13 @@ calc_cm_general <- function(parts_ , conts_, breaks, max_ = 1000, popdata_totals
     }
     
     if (fitwith == 'bs'){
-      outs_weekend = get_matrix_bs(cont_per_age_per_part_weekend, breaks, max_, bs=samples, trunc_flag=trunc_flag, setting=setting)
-      outs_weekday = get_matrix_bs(cont_per_age_per_part_weekday, breaks, max_, bs=samples, trunc_flag=trunc_flag, setting=setting) 
+      if (zi){
+        param = c("p","mu")
+      } else {
+        param = "mu"
+      }
+      outs_weekend = get_matrix_bs(cont_per_age_per_part_weekend, breaks, max_, param=param, bs=samples, trunc_flag=trunc_flag, zi=zi, setting=setting)
+      outs_weekday = get_matrix_bs(cont_per_age_per_part_weekday, breaks, max_, param=param, bs=samples, trunc_flag=trunc_flag, zi=zi, setting=setting) 
     }
     
     mus = (outs_weekend[[2]] * 2./7) + (outs_weekday[[2]] * 5./7)

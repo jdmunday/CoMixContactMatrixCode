@@ -90,7 +90,7 @@ plot_cms_comparison = function(all_egs, pair_sr, region=''){
     geom_tile()+
     geom_text(color='white', size=5)+
     facet_wrap( ~sr, ncol=1) +
-    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0,7.5))+ 
+    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0,4.))+ 
     ylab('Contact age group') +
     xlab('Participant age group') +
     theme(axis.line=element_blank(),
@@ -154,7 +154,7 @@ plot_all_cms = function(all_egs, region='', periods, breaks = c(0,5,12,18,30,40,
     geom_tile()+
     geom_text(color='white', size=5)+
     facet_wrap( ~sr) +
-    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0.02,7.5), trans='log', breaks=c(0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2., 4.), na.value='black')+ 
+    scale_fill_viridis(discrete=FALSE, name='Mean \ncontacts', begin=0, end=1., limits = c(0.02,4.5), trans='log', breaks=c(0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2., 4.), na.value='black')+ 
     guides(fill=guide_colorbar(barheight=30))+
     ylab('Contact age group') +
     xlab('Participant age group') +

@@ -16,14 +16,8 @@ nwk = c(10,8,5,10,3,2,3,9,6)
 samples_ = 1000
 fit_with_ = 'bs'
 max_ = 50
-trunc_flag_ = T
-
-outfolder=paste0('outputs/setting_specific/', country_names[i], '/')
-filename_primer = paste0(outfolder, 'contact_matrices/', fit_with_, samples_, '_ngrps', length(breaks) - 1, '_cap', max_)
-fnms = character(length(week_range))
-for (k in 1:length(week_range)){
-  fnms[k] =  paste0(filename_primer, '_nwks', nwk[k],'_sr', week_range[k])
-}
+trunc_flag_ = F
+zi_ = T
 
 periods = c('1. Lockdown 1', 
             '2. Lockdown 1 easing', 
@@ -36,11 +30,21 @@ periods = c('1. Lockdown 1',
             '9. Lockdown 3 + schools')
 
 for (i in 1:length(country_names)){
-  for (j in 1:length(settings)){
   
+  outfolder=paste0('outputs/setting_specific/', country_names[i], '/')
+  filename_primer = paste0(outfolder, 'contact_matrices/', fit_with_, samples_, '_ngrps', length(breaks) - 1, '_cap', max_)
+  fnms = character(length(week_range))
+  for (k in 1:length(week_range)){
+    fnms[k] =  paste0(filename_primer, '_nwks', nwk[k],'_sr', week_range[k])
+  }
+  
+  for (j in 1:length(settings)){
+    
     fnms_setting <- paste0(fnms, '_', settings[j])
+    if (zi_){
+      fnms_setting <- paste0(fnms_setting,"_zi")
+    }
     if (trunc_flag_){
-      print("hello")
       fnms_setting <- paste0(fnms_setting,"_trunc")
     }
     fnms_setting <- paste0(fnms_setting,'_scms.qs')
@@ -195,12 +199,14 @@ for (i in 1:length(country_names)){
     # write.csv(dates_pres, 'periods_eigenvalues.csv')
     # 
     # ggsave('all_mats.pdf', all_mats_dates, width=20, height=20)
-    if (trunc_flag_){
-      ggsave(paste0('all_mats_',settings[j],'_trunc.pdf'), all_mats, width=20, height=20)  
-    } else {
-      ggsave(paste0('all_mats_',settings[j],'.pdf'), all_mats, width=20, height=20)
+    figname_primer <- paste0("all_mats_",settings[j])
+    if (zi_){
+      figname_primer <- paste0(figname_primer,"_zi")
     }
-    
+    if (trunc_flag_){
+      figname_primer <- paste0(figname_primer,"_trunc")
+    }
+    ggsave(paste0(figname_primer,'.pdf'), all_mats, width=20, height=20)
   }
 }
 
