@@ -11,27 +11,32 @@ country_names = c("uk")
 settings = c("home","school","work","other")
 
 breaks = c(0,5,12,18,30,40,50,60,70,Inf)
-week_range = c(1,11,19,24,34,37,39,42,51)
-nwk = c(10,8,5,10,3,2,3,9,6)
+week_range = c(53,54,57:63) #c(1,11,19,24,34,37,39,42,51)
+nwk = rep(2,length(week_range)) #c(10,8,5,10,3,2,3,9,6)
 samples_ = 1000
 fit_with_ = 'bs'
 max_ = 50
 trunc_flag_ = F
 zi_ = T
 
-periods = c('1. Lockdown 1', 
-            '2. Lockdown 1 easing', 
-            '3. Relaxed restrictions', 
-            '4. School reopening', 
-            '5. Lockdown 2', 
-            '6. Lockdown 2 easing', 
-            '7. Christmas',
-            '8. Lockdown 3', 
-            '9. Lockdown 3 + schools')
+# periods = c('1. Lockdown 1', 
+#             '2. Lockdown 1 easing', 
+#             '3. Relaxed restrictions', 
+#             '4. School reopening', 
+#             '5. Lockdown 2', 
+#             '6. Lockdown 2 easing', 
+#             '7. Christmas',
+#             '8. Lockdown 3', 
+#             '9. Lockdown 3 + schools')
+periods = as.character(week_range)
 
-for (i in 1:length(country_names)){
+nation_names = c("England", "Scotland", "Wales")[1]
+
+for (i in 1:length(nation_names)){
+# for (i in 1:length(country_names)){
   
-  outfolder=paste0('outputs/setting_specific/', country_names[i], '/')
+  outfolder=paste0('outputs/setting_specific/', nation_names[i], '/')
+  # outfolder=paste0('outputs/setting_specific/', country_names[i], '/')
   filename_primer = paste0(outfolder, 'contact_matrices/', fit_with_, samples_, '_ngrps', length(breaks) - 1, '_cap', max_)
   fnms = character(length(week_range))
   for (k in 1:length(week_range)){
@@ -74,7 +79,7 @@ for (i in 1:length(country_names)){
     # ggsave('compare_mat_LD3_plus.pdf', mat5, width=20, height=20)
     
     
-    all_mats = plot_all_cms(all_egs = all_egs, periods = periods, title='A')
+    all_mats = plot_all_cms(all_egs = all_egs, periods = periods) #, title='A')
     
     # dates = data.table::transpose(
     #   data.table(
@@ -199,7 +204,8 @@ for (i in 1:length(country_names)){
     # write.csv(dates_pres, 'periods_eigenvalues.csv')
     # 
     # ggsave('all_mats.pdf', all_mats_dates, width=20, height=20)
-    figname_primer <- paste0("all_mats_",settings[j])
+    figname_primer <- paste0(outfolder,"contact_matrices/all_mats_",settings[j])
+    # figname_primer <- paste0("all_mats_",settings[j])
     if (zi_){
       figname_primer <- paste0(figname_primer,"_zi")
     }
