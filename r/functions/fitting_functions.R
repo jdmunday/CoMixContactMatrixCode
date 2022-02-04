@@ -16,14 +16,14 @@ library(data.table)
 # Input data ----------------------------------------------------------------
 
 
-# this function calculates log of the complement of the sum of a list of liklihoods. 
-# It is used to find the log liklihood of a tail of a right censored distribution
+# this function calculates log of the complement of (i.e. one minus) the sum of a list of likelihoods. 
+# It is used to find the log likelihood of a tail of a right censored distribution
 complementary_logprob <- function(x) {
   tryCatch(log1p(-sum(exp(x))), error=function(e) -Inf)
 }
 
 
-# This funtion calculates the likelihood of a negarive binomial disrtibution given set of partameters 'par' and data 'x'.
+# This function calculates the log-likelihood of a negative binomial distribution given set of parameters 'par' and data 'x'.
 nb_loglik <- function(x, par, n) {
   k <- par[["k"]]
   mean <- par[["mu"]]
@@ -32,6 +32,47 @@ nb_loglik <- function(x, par, n) {
   ll[x >= n] <- dnbinom(n, mu = mean, size = 1/k, log = TRUE)
   return(-sum(ll))
 }
+
+# This function calculates the log-likelihood of a Poisson distribution given mean 'par' and data 'x'.
+poiss_loglik <- function(x, par, n){
+  ll <- rep(NA_real_, length(x))
+  ll[x < n] <- x[x < n] * log(par) - par - log(factorial(x[x < n])) #dpois(x[x < n], par, log = TRUE)
+  ll[x >= n] <- n * log(par) - par - log(factorial(n)) #dpois(n, par, log = TRUE)
+  return(-sum(ll))
+}
+
+# This function calculates the log-likelihood of a zero-inflated negative binomial distribution given set of parameters 'par' and data 'x'.
+zinb_loglik <- function(x, par, n){
+  p <- par[["p"]]
+  k <- par[["k"]]
+  mu <- par[["mu"]]
+  
+  ll <- rep(NA_real_, length(x))
+  ll[x == 0] <- log(p + (1-p)*dnbinom(0, mu = mu, size = 1/k))
+  ll[x > 0 & x < n] <- log(1-p) + dnbinom(x[x > 0 & x < n], mu = mu, size = 1/k, log = T)
+  ll[x >= n] <- log(1-p) + dnbinom(n, mu = mu, size = 1/k, log = T)
+  return(-sum(ll))
+}
+
+# This function calculates the log-likelihood of a truncated negative binomial distribution given set of parameters 'par', data 'x', and upper truncation limit 'n'.
+trunc_nb_loglik <- function(x, par, n) {
+  k <- par[["k"]]
+  mean <- par[["mu"]]
+  ll <- rep(NA_real_, length(x))
+  ll[x <= n] <- dnbinom(x[x <= n], mu = mean, size = 1/k, log = TRUE) - pnbinom(n, mu = mean, size = 1/k, log.p = TRUE)
+  ll[x > n] <- 0
+  return(-sum(ll))  
+}
+
+# This function calculates the log-likelihood of a truncated Poisson distribution given mean 'par', data 'x', and upper truncation limit 'n'.
+trunc_poiss_loglik <- function(x, par, n){
+  ll <- rep(NA_real_, length(x))
+  ll[x <= n] <- x[x <= n] * log(par) - par - log(factorial(x[x <= n])) - ppois(n, par, log.p = TRUE)
+  ll[x > n] <- 0
+  return(-sum(ll))
+}
+
+
 
 # This function optimises negative binomial parameters mu and k for contacts reported by age group i in age group j  
 nbinom_optim_ <- function(i, j, param, n, count_frame) {

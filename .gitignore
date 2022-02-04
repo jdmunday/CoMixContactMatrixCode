@@ -1,6 +1,10 @@
+.Rproj
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
 *.DS_Store
 *SS/*
+r/rough/
+outputs/setting_specific/
+all_mats_*

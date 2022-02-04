@@ -199,9 +199,9 @@ augment_cms = function(cmss, swapouts  = 2, breaks = c(0,5,12,18,30,40,50,60,70,
   eg = data.table(eg)
 
   
-  boolian_switch = matrix(eg[,Var1 == levs[swapouts] | Var2 == levs[swapouts]], nrow=81, ncol=1000)
+  boolean_switch = matrix(eg[,Var1 == levs[swapouts] | Var2 == levs[swapouts]], nrow=81, ncol=1000)
 
-  cms_aug = cms2 * data.table(boolian_switch) +  cms1 * (-(data.table(boolian_switch) -1))
+  cms_aug = cms2 * data.table(boolean_switch) +  cms1 * (-(data.table(boolean_switch) -1))
   
   cms_aug
 }
